@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>my.chan</title>
+  <style>
+    /* General Styles */
+    body {
+      font-family: "MS PGothic", "MS Sans Serif", Arial, sans-serif;
+      background-color: #F0E0D6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+    }
+
+    .container {
+      width: 85%;
+      margin: 0 auto;
+      padding: 10px;
+      background-color: #FFF;
+      border: 1px solid #CCC;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 0;
+      padding: 10px 0;
+      border-bottom: 1px solid #CCC;
+    }
+
+    /* Advertisement Banner */
+    .banner {
+      width: 100%;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .banner img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Post Form */
+    .form-container {
+      margin: 20px 0;
+    }
+
+    .form-container textarea {
+      width: 100%;
+      height: 80px;
+      margin-bottom: 10px;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 5px;
+      border: 1px solid #CCC;
+    }
+
+    .form-container input[type="file"] {
+      margin-bottom: 10px;
+    }
+
+    .form-container input[type="password"] {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+      font-family: inherit;
+      font-size: 12px;
+      border: 1px solid #CCC;
+    }
+
+    .form-container button {
+      padding: 5px 10px;
+      background-color: #EA8;
+      border: 1px solid #CCC;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .form-container button:hover {
+      background-color: #D96;
+    }
+
+    /* Posts */
+    .posts {
+      margin-top: 20px;
+    }
+
+    .post {
+      display: flex;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #F6F6EF;
+      border: 1px solid #CCC;
+    }
+
+    .post img {
+      width: 125px;
+      height: 125px;
+      object-fit: cover;
+      margin-right: 10px;
+      border: 1px solid #CCC;
+    }
+
+    .post .info {
+      font-size: 12px;
+      color: #789922;
+      margin-bottom: 5px;
+    }
+
+    .post .message {
+      font-size: 14px;
+      color: #000;
+      word-wrap: break-word;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 20px;
+      padding: 10px 0;
+      border-top: 1px solid #CCC;
+      text-align: center;
+      font-size: 12px;
+      color: #789922;
+    }
+  </style>
+</head>
+<body>
+<!-- Advertisement Banner -->
+<br>
+<div class="banner">
+  <img src="https://64.media.tumblr.com/c42fe40a4522620229a7de5177046283/ccbde26a43bf604b-e7/s640x960/b030c5e9e816108291e790e619e427525ff02baa.gifv" alt="Advertisement Banner">
+</div>
+
+<div class="container">
+  <h1>my.chan</h1>
+
+  <!-- Post Form -->
+  <div class="form-container">
+    <form id="postForm">
+      <textarea id="message" placeholder="Write your message here..." required></textarea><br>
+      <input type="file" id="image" accept="image/*" required><br>
+      <input type="password" id="password" placeholder="Enter password to post" required><br>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <!-- Posts -->
+  <div id="posts" class="posts">
+    <!-- Posts will be dynamically added here -->
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    Simple Image Board - Inspired by 2chan/Futaba
+  </footer>
+</div>
+
+<script>
+  const GITHUB_USERNAME = "YOUR_GITHUB_USERNAME"; // Replace with your GitHub username
+  const REPO_NAME = "YOUR_REPO_NAME"; // Replace with your repository name
+  const GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"; // Replace with your GitHub token
+  const POSTS_FILE_PATH = "posts.json"; // Path to the posts file in your repo
+  const PASSWORD = "amelia123"; // Password to post
+
+  // Load posts from GitHub when the page loads
+  document.addEventListener("DOMContentLoaded", function () {
+    loadPosts();
+  });
+
+  // Handle form submission
+  document.getElementById("postForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const message = document.getElementById("message").value;
+    const imageFile = document.getElementById("image").files[0];
+    const password = document.getElementById("password").value;
+
+    if (password !== PASSWORD) {
+      alert("Incorrect password!");
+      return;
+    }
+
+    if (message && imageFile) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const imageData = e.target.result;
+
+        // Create a new post object
+        const post = {
+          message: message,
+          image: imageData,
+          timestamp: new Date().toLocaleString(),
+        };
+
+        // Save the post to GitHub
+        savePost(post);
+
+        // Clear the form
+        document.getElementById("postForm").reset();
+      };
+      reader.readAsDataURL(imageFile);
+    }
+  });
+
+  // Load posts from GitHub
+  async function loadPosts() {
+    const postsContainer = document.getElementById("posts");
+    postsContainer.innerHTML = ""; // Clear existing posts
+
+    try {
+      const response = await fetch(
+              `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${POSTS_FILE_PATH}`,
+              {
+                headers: {
+                  Authorization: `token ${GITHUB_TOKEN}`,
+                },
+              }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch posts");
+
+      const data = await response.json();
+      const posts = JSON.parse(atob(data.content)); // Decode base64 content
+
+      posts.forEach((post) => {
+        const postElement = document.createElement("div");
+        postElement.classList.add("post");
+
+        postElement.innerHTML = `
+                          <img src="${post.image}" alt="Post Image">
+                          <div>
+                              <div class="info">Anonymous - ${post.timestamp}</div>
+                              <div class="message">${post.message}</div>
+                          </div>
+                      `;
+
+        postsContainer.appendChild(postElement);
+      });
+    } catch (error) {
+      console.error("Error loading posts:", error);
+    }
+  }
+
+  // Save a post to GitHub
+  async function savePost(post) {
+    try {
+      // Fetch the current content of the posts file
+      const response = await fetch(
+              `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${POSTS_FILE_PATH}`,
+              {
+                headers: {
+                  Authorization: `token ${GITHUB_TOKEN}`,
+                },
+              }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch posts file");
+
+      const data = await response.json();
+      const currentContent = JSON.parse(atob(data.content)); // Decode base64 content
+
+      // Add the new post
+      currentContent.push(post);
+
+      // Update the file on GitHub
+      await fetch(
+              `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${POSTS_FILE_PATH}`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `token ${GITHUB_TOKEN}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  message: "Update posts",
+                  content: btoa(JSON.stringify(currentContent)), // Encode to base64
+                  sha: data.sha, // Required to update the file
+                }),
+              }
+      );
+
+      // Reload posts to display the new one
+      loadPosts();
+    } catch (error) {
+      console.error("Error saving post:", error);
+    }
+  }
+</script>
+</body>
+</html>
